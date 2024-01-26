@@ -8,7 +8,6 @@ import { initPrompt } from "./utils/initPrompt";
 
 import { config } from "./config";
 
-// https://wa.me/+5512982754592
 interface CustomerChat {
   status?: "open" | "closed";
   orderCode: string;
