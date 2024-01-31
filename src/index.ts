@@ -4,9 +4,8 @@ import { Message, Whatsapp, create } from "venom-bot";
 import { openai } from "./lib/openai";
 import { redis } from "./lib/redis";
 
-import { initPrompt } from "./utils/initPrompt";
-
-import { config } from "./config";
+import { initPrompt } from "./utils/promptLlama";
+import LLama from "./lib/llama";
 
 interface CustomerChat {
   status?: "open" | "closed";
@@ -23,14 +22,12 @@ interface CustomerChat {
 async function completion(
   messages: ChatCompletionRequestMessage[]
 ): Promise<string | undefined> {
-  const completion = await openai.createChatCompletion({
-    model: "gpt-3.5-turbo",
-    temperature: 0,
-    max_tokens: 256,
+  const completion = await LLama.createChatCompletion(
     messages,
-  });
-
-  return completion.data.choices[0].message?.content;
+    initPrompt("", "")
+  );
+  console.log(completion);
+  return completion;
 }
 
 create({
@@ -43,15 +40,15 @@ create({
   });
 
 async function start(client: Whatsapp) {
+  const storeName = "Pizzaria Teste";
+
   client.onMessage(async (message: Message) => {
     if (!message.body || message.isGroupMsg) return;
 
     const customerPhone = `+${message.from.replace("@c.us", "")}`;
     const customerName = message.author;
     const customerKey = `customer:${customerPhone}:chat`;
-    const orderCode = `${config.prefixOrderNumber}${(
-      "000000" + Math.random()
-    ).slice(-6)}`;
+    const orderCode = `#sk-${("00000" + Math.random()).slice(-5)}`;
 
     const lastChat = JSON.parse((await redis.get(customerKey)) || "{}");
 
@@ -69,7 +66,9 @@ async function start(client: Whatsapp) {
             messages: [
               {
                 role: "system",
-                content: initPrompt(config.companyName, orderCode),
+                content:
+                  "Você é um assistente de IA útil e amigável. Responda de forma muito concisa.",
+                //content: initPrompt(storeName, orderCode),
               },
             ],
             orderSummary: "",
